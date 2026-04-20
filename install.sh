@@ -21,7 +21,8 @@ sudo apt-get install -y \
     python3-venv python3-pip python3-dev \
     build-essential cmake pkg-config \
     libsdl2-2.0-0 libsdl2-image-2.0-0 libsdl2-ttf-2.0-0 libsdl2-mixer-2.0-0 \
-    libfreetype6-dev libjpeg-dev \
+    libsdl2-dev libsdl2-image-dev libsdl2-ttf-dev libsdl2-mixer-dev \
+    libfreetype6-dev libjpeg-dev libportmidi-dev \
     fonts-noto-core fonts-noto-cjk fonts-liberation \
     fonts-hosny-amiri
 
