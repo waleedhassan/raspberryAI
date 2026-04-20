@@ -33,7 +33,7 @@ This:
 - installs runtime libs + Arabic fonts via apt,
 - installs **Ollama** (prebuilt aarch64 binary — no source compile) and enables
   its systemd service,
-- `ollama pull gemma2:2b` (override via `OLLAMA_MODEL=<tag> ./install.sh`),
+- `ollama pull gemma4:31b-cloud` (override via `OLLAMA_MODEL=<tag> ./install.sh`),
 - creates a venv with pygame, PyMuPDF, arabic-reshaper, python-bidi,
 - enables the `ai-pdf-screen.service` systemd unit (ordered after `ollama.service`).
 
@@ -66,7 +66,7 @@ Then:
 | --- | --- | --- |
 | `AI_PDF_ROOT` | `/home/pi/ai-pdf` | App root directory |
 | `AI_PDF_OLLAMA_URL` | `http://127.0.0.1:11434` | Ollama server URL |
-| `AI_PDF_MODEL` | `gemma2:2b` | Ollama model tag (must be `ollama pull`ed) |
+| `AI_PDF_MODEL` | `gemma4:31b-cloud` | Ollama model tag (must be `ollama pull`ed) |
 | `AI_PDF_CTX` | `2048` | context window (`num_ctx`) |
 | `AI_PDF_THREADS` | `4` | CPU threads (`num_thread`) |
 | `AI_PDF_MAX_TOKENS` | `160` | insight length cap (`num_predict`) |
@@ -79,7 +79,7 @@ Then:
 Install Ollama from <https://ollama.com> and pull the model once:
 
 ```bash
-ollama pull gemma2:2b
+ollama pull gemma4:31b-cloud
 ```
 
 Then:

@@ -36,7 +36,7 @@ SCREEN_H = int(os.environ.get("AI_PDF_H", 320))
 FPS = 30
 
 OLLAMA_URL = os.environ.get("AI_PDF_OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/")
-MODEL_TAG = os.environ.get("AI_PDF_MODEL", "gemma2:2b")
+MODEL_TAG = os.environ.get("AI_PDF_MODEL", "gemma4:31b-cloud")
 MODEL_CTX = int(os.environ.get("AI_PDF_CTX", 2048))
 MODEL_THREADS = int(os.environ.get("AI_PDF_THREADS", 4))
 MAX_TOKENS = int(os.environ.get("AI_PDF_MAX_TOKENS", 160))
@@ -202,7 +202,7 @@ class InsightEngine:
             return
         tags = {m.get("name", "") for m in body.get("models", [])}
         # Ollama tags are "<name>:<variant>". Accept an exact match, or any
-        # variant of the requested base name (e.g. "gemma2" matches "gemma2:2b").
+        # variant of the requested base name (e.g. "gemma4" matches "gemma4:31b-cloud").
         base = self.model.split(":", 1)[0]
         if self.model not in tags and not any(t.split(":", 1)[0] == base for t in tags):
             self._load_error = (

@@ -5,7 +5,7 @@ set -euo pipefail
 APP_DIR="/home/pi/ai-pdf"
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VENV="$APP_DIR/venv"
-OLLAMA_MODEL="${OLLAMA_MODEL:-gemma2:2b}"
+OLLAMA_MODEL="${OLLAMA_MODEL:-gemma4:31b-cloud}"
 
 echo "==> creating $APP_DIR layout"
 mkdir -p "$APP_DIR/input" "$APP_DIR/cache" "$APP_DIR/fonts"
@@ -68,7 +68,29 @@ ollama pull "$OLLAMA_MODEL"
 echo "==> python venv"
 python3 -m venv "$VENV"
 "$VENV/bin/pip" install --upgrade pip wheel
-"$VENV/bin/pip" install -r "$APP_DIR/requirements.txt"
+
+# Pure-Python packages — always fast, no compile risk.
+echo "==> installing pure-python deps"
+"$VENV/bin/pip" install arabic-reshaper==3.0.0 python-bidi==0.4.2
+
+# pygame and PyMuPDF both have prebuilt aarch64 wheels on PyPI.
+# --only-binary=:all: makes pip take the wheel or fail immediately with a
+# clear error — it will NEVER attempt a source compile that hangs the Pi.
+echo "==> installing pygame (wheel only)"
+"$VENV/bin/pip" install --only-binary=:all: pygame==2.6.1 || {
+    echo "  no pygame wheel found — falling back to system package"
+    sudo apt-get install -y python3-pygame
+}
+
+echo "==> installing PyMuPDF (wheel only)"
+"$VENV/bin/pip" install --only-binary=:all: PyMuPDF==1.24.9 || {
+    echo "  PyMuPDF 1.24.9 wheel not found for this Python — trying latest"
+    "$VENV/bin/pip" install --only-binary=:all: PyMuPDF || {
+        echo "  still no wheel — installing system libmupdf and building with apt headers"
+        sudo apt-get install -y libmupdf-dev
+        "$VENV/bin/pip" install PyMuPDF
+    }
+}
 
 echo "==> systemd unit"
 sudo cp "$REPO_DIR/ai-pdf-screen.service" /etc/systemd/system/ai-pdf-screen.service
