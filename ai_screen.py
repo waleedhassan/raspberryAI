@@ -14,6 +14,8 @@ import sys
 import textwrap
 import threading
 import time
+import urllib.error
+import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
@@ -26,7 +28,6 @@ import pygame
 
 ROOT = Path(os.environ.get("AI_PDF_ROOT", "/home/pi/ai-pdf"))
 INPUT_DIR = ROOT / "input"
-MODELS_DIR = ROOT / "models"
 CACHE_DIR = ROOT / "cache"
 FONTS_DIR = ROOT / "fonts"
 
@@ -34,11 +35,12 @@ SCREEN_W = int(os.environ.get("AI_PDF_W", 480))
 SCREEN_H = int(os.environ.get("AI_PDF_H", 320))
 FPS = 30
 
-MODEL_FILENAME = os.environ.get("AI_PDF_MODEL", "gemma-2b-it-q4_k_m.gguf")
-MODEL_PATH = MODELS_DIR / MODEL_FILENAME
+OLLAMA_URL = os.environ.get("AI_PDF_OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/")
+MODEL_TAG = os.environ.get("AI_PDF_MODEL", "gemma2:2b")
 MODEL_CTX = int(os.environ.get("AI_PDF_CTX", 2048))
 MODEL_THREADS = int(os.environ.get("AI_PDF_THREADS", 4))
 MAX_TOKENS = int(os.environ.get("AI_PDF_MAX_TOKENS", 160))
+GEN_TIMEOUT = float(os.environ.get("AI_PDF_GEN_TIMEOUT", 180))
 
 MAX_CHUNK_CHARS = 1800
 MAX_CHUNKS_CACHED = 64
@@ -180,36 +182,35 @@ AR_SYSTEM = (
 
 
 class InsightEngine:
-    """Wraps llama.cpp for generating insights. Thread-safe via internal lock."""
+    """Talks to a local Ollama server for generation. Thread-safe via internal lock."""
 
-    def __init__(self, model_path: Path):
-        self.model_path = model_path
-        self.llm = None
+    def __init__(self, model: str, base_url: str):
+        self.model = model
+        self.base_url = base_url.rstrip("/")
         self._lock = threading.Lock()
         self._load_error: Optional[str] = None
+        self._ready = False
 
     def load(self) -> None:
-        if self.llm is not None or self._load_error:
+        if self._ready or self._load_error:
             return
         try:
-            from llama_cpp import Llama
+            with urllib.request.urlopen(f"{self.base_url}/api/tags", timeout=5) as r:
+                body = json.loads(r.read().decode("utf-8"))
         except Exception as e:
-            self._load_error = f"llama-cpp-python not installed: {e}"
+            self._load_error = f"Ollama not reachable at {self.base_url}: {e}"
             return
-        if not self.model_path.exists():
-            self._load_error = f"Model missing: {self.model_path.name}"
-            return
-        try:
-            self.llm = Llama(
-                model_path=str(self.model_path),
-                n_ctx=MODEL_CTX,
-                n_threads=MODEL_THREADS,
-                n_gpu_layers=0,
-                verbose=False,
-                logits_all=False,
+        tags = {m.get("name", "") for m in body.get("models", [])}
+        # Ollama tags are "<name>:<variant>". Accept an exact match, or any
+        # variant of the requested base name (e.g. "gemma2" matches "gemma2:2b").
+        base = self.model.split(":", 1)[0]
+        if self.model not in tags and not any(t.split(":", 1)[0] == base for t in tags):
+            self._load_error = (
+                f"Ollama model '{self.model}' not pulled. "
+                f"Run: ollama pull {self.model}"
             )
-        except Exception as e:
-            self._load_error = f"Model load failed: {e}"
+            return
+        self._ready = True
 
     @property
     def load_error(self) -> Optional[str]:
@@ -218,9 +219,9 @@ class InsightEngine:
     def generate(self, chunk: str, language: str, seed: int) -> str:
         if self._load_error:
             return self._fallback(chunk, language)
-        if self.llm is None:
+        if not self._ready:
             self.load()
-        if self.llm is None:
+        if not self._ready:
             return self._fallback(chunk, language)
 
         system = AR_SYSTEM if language == "ar" else EN_SYSTEM
@@ -228,26 +229,37 @@ class InsightEngine:
             f"النص:\n{chunk}\n\nاكتب البصيرة العميقة الآن:" if language == "ar"
             else f"Excerpt:\n{chunk}\n\nWrite the one deep insight now:"
         )
-        prompt = (
-            "<start_of_turn>user\n"
-            f"{system}\n\n{user}\n"
-            "<end_of_turn>\n<start_of_turn>model\n"
+        payload = {
+            "model": self.model,
+            "stream": False,
+            "messages": [
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ],
+            "options": {
+                "num_ctx": MODEL_CTX,
+                "num_thread": MODEL_THREADS,
+                "num_predict": MAX_TOKENS,
+                "temperature": 0.85,
+                "top_p": 0.92,
+                "top_k": 50,
+                "repeat_penalty": 1.15,
+                "seed": seed,
+            },
+        }
+        req = urllib.request.Request(
+            f"{self.base_url}/api/chat",
+            data=json.dumps(payload).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
         )
         with self._lock:
             try:
-                out = self.llm(
-                    prompt,
-                    max_tokens=MAX_TOKENS,
-                    temperature=0.85,
-                    top_p=0.92,
-                    top_k=50,
-                    repeat_penalty=1.15,
-                    seed=seed,
-                    stop=["<end_of_turn>", "<start_of_turn>"],
-                )
+                with urllib.request.urlopen(req, timeout=GEN_TIMEOUT) as resp:
+                    body = json.loads(resp.read().decode("utf-8"))
             except Exception as e:
                 return self._fallback(chunk, language, error=str(e))
-        text = out["choices"][0]["text"].strip()
+        text = (body.get("message") or {}).get("content", "").strip()
         return self._clean(text, language) or self._fallback(chunk, language)
 
     @staticmethod
@@ -686,7 +698,7 @@ class App:
         self.text_area = self.card_rect.inflate(-28, -28)
         self.renderer = InsightRenderer(self.fonts, pygame.Rect(0, 0, self.text_area.w, self.text_area.h))
 
-        self.engine = InsightEngine(MODEL_PATH)
+        self.engine = InsightEngine(MODEL_TAG, OLLAMA_URL)
         threading.Thread(target=self.engine.load, daemon=True).start()
 
         self.controller = InsightController(self.engine)
@@ -705,7 +717,7 @@ class App:
     # -- setup ---------------------------------------------------------------
     @staticmethod
     def _ensure_dirs() -> None:
-        for d in (INPUT_DIR, MODELS_DIR, CACHE_DIR, FONTS_DIR):
+        for d in (INPUT_DIR, CACHE_DIR, FONTS_DIR):
             d.mkdir(parents=True, exist_ok=True)
 
     def _init_pygame(self) -> None:

@@ -5,9 +5,10 @@ set -euo pipefail
 APP_DIR="/home/pi/ai-pdf"
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VENV="$APP_DIR/venv"
+OLLAMA_MODEL="${OLLAMA_MODEL:-gemma2:2b}"
 
 echo "==> creating $APP_DIR layout"
-mkdir -p "$APP_DIR/input" "$APP_DIR/models" "$APP_DIR/cache" "$APP_DIR/fonts"
+mkdir -p "$APP_DIR/input" "$APP_DIR/cache" "$APP_DIR/fonts"
 
 echo "==> copying app files"
 cp "$REPO_DIR/ai_screen.py" "$APP_DIR/ai_screen.py"
@@ -19,12 +20,29 @@ echo "==> apt prerequisites (needs sudo)"
 sudo apt-get update
 sudo apt-get install -y \
     python3-venv python3-pip python3-dev \
-    build-essential cmake pkg-config \
     libsdl2-2.0-0 libsdl2-image-2.0-0 libsdl2-ttf-2.0-0 libsdl2-mixer-2.0-0 \
-    libsdl2-dev libsdl2-image-dev libsdl2-ttf-dev libsdl2-mixer-dev \
-    libfreetype6-dev libjpeg-dev libportmidi-dev \
+    libfreetype6 libjpeg62-turbo libportmidi0 \
     fonts-noto-core fonts-noto-cjk fonts-liberation \
-    fonts-hosny-amiri
+    fonts-hosny-amiri \
+    curl ca-certificates
+
+echo "==> installing Ollama (prebuilt aarch64 binary — no compile)"
+if ! command -v ollama >/dev/null 2>&1; then
+    curl -fsSL https://ollama.com/install.sh | sh
+fi
+# The Ollama installer usually registers a systemd unit named `ollama.service`.
+# Make sure it's running before we try to pull.
+sudo systemctl enable --now ollama.service
+# Wait briefly for the daemon to start listening on :11434.
+for i in 1 2 3 4 5 6 7 8 9 10; do
+    if curl -fsS http://127.0.0.1:11434/api/tags >/dev/null 2>&1; then
+        break
+    fi
+    sleep 1
+done
+
+echo "==> pulling model $OLLAMA_MODEL (one-time download)"
+ollama pull "$OLLAMA_MODEL"
 
 echo "==> python venv"
 python3 -m venv "$VENV"
@@ -41,15 +59,18 @@ cat <<EOF
 Install complete.
 
 Next steps:
-  1. Download a quantized model (e.g. gemma-2b-it Q4_K_M gguf) into:
-         $APP_DIR/models/
-     Name it gemma-2b-it-q4_k_m.gguf, or set AI_PDF_MODEL=<filename> in the service.
-  2. Drop a PDF in:
+  1. Drop a PDF in:
          $APP_DIR/input/
-  3. Start the service:
+  2. Start the service:
          sudo systemctl start ai-pdf-screen.service
      Or reboot — it is already enabled at boot.
 
-Logs:    journalctl -u ai-pdf-screen.service -f
-Stop:    sudo systemctl stop ai-pdf-screen.service
+Model:
+  Current: $OLLAMA_MODEL  (managed by Ollama, stored under /usr/share/ollama)
+  Swap:    ollama pull <tag>
+           then set Environment=AI_PDF_MODEL=<tag> in ai-pdf-screen.service
+
+Logs:
+  App:    journalctl -u ai-pdf-screen.service -f
+  Ollama: journalctl -u ollama.service -f
 EOF
