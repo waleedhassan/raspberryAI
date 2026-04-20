@@ -1,0 +1,25 @@
+[Unit]
+Description=AI PDF Brain — fullscreen insight display
+After=multi-user.target systemd-user-sessions.service
+Wants=multi-user.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+Environment=HOME=/home/pi
+Environment=XDG_RUNTIME_DIR=/run/user/1000
+WorkingDirectory=/home/pi/ai-pdf
+ExecStart=/home/pi/ai-pdf/start.sh
+Restart=always
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+# Give the framebuffer/KMS devices to the service.
+SupplementaryGroups=video render input tty
+TTYPath=/dev/tty1
+TTYReset=yes
+TTYVHangup=yes
+
+[Install]
+WantedBy=multi-user.target
