@@ -26,6 +26,27 @@ sudo apt-get install -y \
     fonts-hosny-amiri \
     curl ca-certificates
 
+echo "==> checking CPU architecture"
+# uname -m tells the kernel arch. dpkg tells the userland arch, which is what
+# actually matters — some Pi OS images have a 64-bit kernel but 32-bit userland.
+DPKG_ARCH="$(dpkg --print-architecture 2>/dev/null || echo unknown)"
+KERNEL_ARCH="$(uname -m)"
+if [ "$DPKG_ARCH" != "arm64" ] && [ "$DPKG_ARCH" != "aarch64" ]; then
+    cat >&2 <<ERR
+
+ERROR: Your Pi userland is 32-bit (dpkg arch: $DPKG_ARCH, kernel: $KERNEL_ARCH).
+Ollama requires a 64-bit userland (arm64).
+
+Your kernel is already 64-bit, but the OS image you flashed was 32-bit.
+Re-flash your SD card with the 64-bit Raspberry Pi OS:
+  https://www.raspberrypi.com/software/
+  Choose: "Raspberry Pi OS (64-bit)" or "Raspberry Pi OS Lite (64-bit)"
+
+After flashing and booting, run ./install.sh again.
+ERR
+    exit 1
+fi
+
 echo "==> installing Ollama (prebuilt aarch64 binary — no compile)"
 if ! command -v ollama >/dev/null 2>&1; then
     curl -fsSL https://ollama.com/install.sh | sh
