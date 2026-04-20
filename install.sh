@@ -23,7 +23,7 @@ sudo apt-get install -y \
     libsdl2-2.0-0 libsdl2-image-2.0-0 libsdl2-ttf-2.0-0 libsdl2-mixer-2.0-0 \
     libfreetype6-dev libjpeg-dev \
     fonts-noto-core fonts-noto-cjk fonts-liberation \
-    fonts-hosny-amiri fonts-noto-naskh-arabic
+    fonts-hosny-amiri
 
 echo "==> python venv"
 python3 -m venv "$VENV"
