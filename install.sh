@@ -92,10 +92,51 @@ echo "==> installing PyMuPDF (wheel only)"
     }
 }
 
-echo "==> systemd unit"
-sudo cp "$REPO_DIR/ai-pdf-screen.service" /etc/systemd/system/ai-pdf-screen.service
+echo "==> kiosk autoboot: console + autologin + xinit (no desktop)"
+
+# Boot to console instead of the LXDE desktop.
+sudo systemctl set-default multi-user.target
+# If an older install enabled the graphical service, take it out of the boot path.
+sudo systemctl disable ai-pdf-screen.service 2>/dev/null || true
+
+# Auto-login user pi on tty1 via a systemd getty override.
+sudo mkdir -p /etc/systemd/system/getty@tty1.service.d
+sudo tee /etc/systemd/system/getty@tty1.service.d/autologin.conf >/dev/null <<EOF
+[Service]
+ExecStart=
+ExecStart=-/sbin/agetty --autologin pi --noclear %I \$TERM
+EOF
+
+# On tty1, bash -> startx -> xinit -> our app. No display manager, no DE.
+# The while loop restarts X if the app dies (equivalent to Restart=always).
+PROFILE="/home/pi/.bash_profile"
+if ! grep -q 'AI_PDF_KIOSK' "$PROFILE" 2>/dev/null; then
+    cat >>"$PROFILE" <<'PROFILE_EOF'
+
+# AI_PDF_KIOSK — auto-start the fullscreen app on tty1 login.
+if [ -z "$DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ]; then
+    while :; do
+        startx -- -nocursor
+        sleep 2
+    done
+fi
+PROFILE_EOF
+fi
+chown pi:pi "$PROFILE"
+
+# .xinitrc is the X session. With no WM and no panel, the app is the entire UI.
+# When it exits, X exits, the while loop restarts it.
+cat >/home/pi/.xinitrc <<'XINIT_EOF'
+#!/bin/sh
+xset s off
+xset -dpms
+xset s noblank
+exec /home/pi/ai-pdf/start.sh
+XINIT_EOF
+chown pi:pi /home/pi/.xinitrc
+chmod +x /home/pi/.xinitrc
+
 sudo systemctl daemon-reload
-sudo systemctl enable ai-pdf-screen.service
 
 cat <<EOF
 
@@ -104,16 +145,20 @@ Install complete.
 Next steps:
   1. Drop a PDF in:
          $APP_DIR/input/
-  2. Start the service:
-         sudo systemctl start ai-pdf-screen.service
-     Or reboot — it is already enabled at boot.
+  2. Reboot — on boot, the Pi goes straight to the app (no desktop).
+         sudo reboot
 
 Model:
   Current: $OLLAMA_MODEL  (managed by Ollama, stored under /usr/share/ollama)
   Swap:    ollama pull <tag>
-           then set Environment=AI_PDF_MODEL=<tag> in ai-pdf-screen.service
+           then export AI_PDF_MODEL=<tag> in start.sh
 
 Logs:
-  App:    journalctl -u ai-pdf-screen.service -f
+  App:    runs on tty1 — Ctrl+Alt+F2 to get a shell, 'journalctl -b' for this boot
   Ollama: journalctl -u ollama.service -f
+
+To undo kiosk mode and get the desktop back:
+  sudo systemctl set-default graphical.target
+  sudo rm /etc/systemd/system/getty@tty1.service.d/autologin.conf
+  # then remove the AI_PDF_KIOSK block from /home/pi/.bash_profile
 EOF

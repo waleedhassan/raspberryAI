@@ -760,7 +760,7 @@ class App:
     def _init_pygame(self) -> None:
         os.environ.setdefault("SDL_VIDEO_CENTERED", "1")
         pygame.init()
-        pygame.display.set_caption("AI PDF Brain")
+        pygame.display.set_caption("DStation AI")
         flags = pygame.FULLSCREEN | pygame.SCALED
         if os.environ.get("AI_PDF_WINDOWED") == "1":
             flags = pygame.SCALED
@@ -851,7 +851,7 @@ class App:
             )
 
     def _draw_footer(self) -> None:
-        label = self.fonts.footer.render("AI PDF Brain", True, TEXT_DIM)
+        label = self.fonts.footer.render("DStation AI", True, TEXT_DIM)
         rect = label.get_rect()
         rect.midbottom = (SCREEN_W // 2, SCREEN_H - 6)
         self.screen.blit(label, rect)
