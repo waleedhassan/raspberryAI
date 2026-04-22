@@ -8,7 +8,7 @@ Arabic and English PDFs.
 ## Layout on the Pi
 
 ```
-/home/pi/ai-pdf/
+/home/waleed/ai-pdf/
 ├── input/          # drop a PDF here; the app auto-detects changes
 ├── cache/          # extracted PDF chunks, keyed by file fingerprint
 ├── fonts/          # optional: bundle Inter / Amiri TTFs here
@@ -29,7 +29,7 @@ On the Pi, from this repo:
 
 This:
 
-- copies the app into `/home/pi/ai-pdf/`,
+- copies the app into `/home/waleed/ai-pdf/`,
 - installs runtime libs + Arabic fonts via apt,
 - installs **Ollama** (prebuilt aarch64 binary — no source compile) and enables
   its systemd service,
@@ -39,7 +39,7 @@ This:
 
 Then:
 
-1. Place a PDF in `/home/pi/ai-pdf/input/`.
+1. Place a PDF in `/home/waleed/ai-pdf/input/`.
 2. `sudo systemctl start ai-pdf-screen.service` — or reboot.
 
 ## How it behaves
@@ -64,7 +64,7 @@ Then:
 
 | Var | Default | Meaning |
 | --- | --- | --- |
-| `AI_PDF_ROOT` | `/home/pi/ai-pdf` | App root directory |
+| `AI_PDF_ROOT` | `/home/waleed/ai-pdf` | App root directory |
 | `AI_PDF_OLLAMA_URL` | `http://127.0.0.1:11434` | Ollama server URL |
 | `AI_PDF_MODEL` | `gemma4:31b-cloud` | Ollama model tag (must be `ollama pull`ed) |
 | `AI_PDF_CTX` | `2048` | context window (`num_ctx`) |

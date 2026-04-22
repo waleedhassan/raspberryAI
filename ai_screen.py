@@ -26,7 +26,7 @@ import pygame
 # Paths & configuration
 # ---------------------------------------------------------------------------
 
-ROOT = Path(os.environ.get("AI_PDF_ROOT", "/home/pi/ai-pdf"))
+ROOT = Path(os.environ.get("AI_PDF_ROOT", "/home/waleed/ai-pdf"))
 INPUT_DIR = ROOT / "input"
 CACHE_DIR = ROOT / "cache"
 FONTS_DIR = ROOT / "fonts"

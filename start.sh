@@ -2,7 +2,7 @@
 # start.sh — launch AI PDF Brain in fullscreen on the Pi's framebuffer / KMS display.
 set -euo pipefail
 
-APP_DIR="${AI_PDF_APP_DIR:-/home/pi/ai-pdf}"
+APP_DIR="${AI_PDF_APP_DIR:-/home/waleed/ai-pdf}"
 VENV="${AI_PDF_VENV:-$APP_DIR/venv}"
 PY="$VENV/bin/python"
 
@@ -13,7 +13,7 @@ export PYTHONUNBUFFERED=1
 # replaces the fbdev stack and blanks the TFT.
 export SDL_VIDEODRIVER="${SDL_VIDEODRIVER:-x11}"
 export DISPLAY="${DISPLAY:-:0}"
-export XAUTHORITY="${XAUTHORITY:-/home/pi/.Xauthority}"
+export XAUTHORITY="${XAUTHORITY:-/home/waleed/.Xauthority}"
 export SDL_NOMOUSE=1
 
 cd "$APP_DIR"

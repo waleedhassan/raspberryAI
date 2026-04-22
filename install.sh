@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# install.sh — one-shot installer. Run on the Pi as the `pi` user (or with sudo where noted).
+# install.sh — one-shot installer. Run on the Pi as the `waleed` user (or with sudo where noted).
 set -euo pipefail
 
-APP_DIR="/home/pi/ai-pdf"
+APP_DIR="/home/waleed/ai-pdf"
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VENV="$APP_DIR/venv"
 OLLAMA_MODEL="${OLLAMA_MODEL:-gemma4:31b-cloud}"
@@ -99,17 +99,17 @@ sudo systemctl set-default multi-user.target
 # If an older install enabled the graphical service, take it out of the boot path.
 sudo systemctl disable ai-pdf-screen.service 2>/dev/null || true
 
-# Auto-login user pi on tty1 via a systemd getty override.
+# Auto-login user waleed on tty1 via a systemd getty override.
 sudo mkdir -p /etc/systemd/system/getty@tty1.service.d
 sudo tee /etc/systemd/system/getty@tty1.service.d/autologin.conf >/dev/null <<EOF
 [Service]
 ExecStart=
-ExecStart=-/sbin/agetty --autologin pi --noclear %I \$TERM
+ExecStart=-/sbin/agetty --autologin waleed --noclear %I \$TERM
 EOF
 
 # On tty1, bash -> startx -> xinit -> our app. No display manager, no DE.
 # The while loop restarts X if the app dies (equivalent to Restart=always).
-PROFILE="/home/pi/.bash_profile"
+PROFILE="/home/waleed/.bash_profile"
 if ! grep -q 'AI_PDF_KIOSK' "$PROFILE" 2>/dev/null; then
     cat >>"$PROFILE" <<'PROFILE_EOF'
 
@@ -122,19 +122,19 @@ if [ -z "$DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ]; then
 fi
 PROFILE_EOF
 fi
-chown pi:pi "$PROFILE"
+chown waleed:waleed "$PROFILE"
 
 # .xinitrc is the X session. With no WM and no panel, the app is the entire UI.
 # When it exits, X exits, the while loop restarts it.
-cat >/home/pi/.xinitrc <<'XINIT_EOF'
+cat >/home/waleed/.xinitrc <<'XINIT_EOF'
 #!/bin/sh
 xset s off
 xset -dpms
 xset s noblank
-exec /home/pi/ai-pdf/start.sh
+exec /home/waleed/ai-pdf/start.sh
 XINIT_EOF
-chown pi:pi /home/pi/.xinitrc
-chmod +x /home/pi/.xinitrc
+chown waleed:waleed /home/waleed/.xinitrc
+chmod +x /home/waleed/.xinitrc
 
 sudo systemctl daemon-reload
 
@@ -160,5 +160,5 @@ Logs:
 To undo kiosk mode and get the desktop back:
   sudo systemctl set-default graphical.target
   sudo rm /etc/systemd/system/getty@tty1.service.d/autologin.conf
-  # then remove the AI_PDF_KIOSK block from /home/pi/.bash_profile
+  # then remove the AI_PDF_KIOSK block from /home/waleed/.bash_profile
 EOF

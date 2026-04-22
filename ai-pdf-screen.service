@@ -7,14 +7,14 @@ Requires=graphical.target
 
 [Service]
 Type=simple
-User=pi
-Group=pi
-Environment=HOME=/home/pi
+User=waleed
+Group=waleed
+Environment=HOME=/home/waleed
 Environment=XDG_RUNTIME_DIR=/run/user/1000
 Environment=DISPLAY=:0
-Environment=XAUTHORITY=/home/pi/.Xauthority
-WorkingDirectory=/home/pi/ai-pdf
-ExecStart=/home/pi/ai-pdf/start.sh
+Environment=XAUTHORITY=/home/waleed/.Xauthority
+WorkingDirectory=/home/waleed/ai-pdf
+ExecStart=/home/waleed/ai-pdf/start.sh
 Restart=always
 RestartSec=3
 StandardOutput=journal
