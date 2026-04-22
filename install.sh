@@ -22,7 +22,7 @@ sudo apt-get install -y \
     python3-venv python3-pip python3-dev \
     libsdl2-2.0-0 libsdl2-image-2.0-0 libsdl2-ttf-2.0-0 libsdl2-mixer-2.0-0 \
     libfreetype6 libjpeg62-turbo libportmidi0 \
-    fonts-noto-core fonts-noto-cjk fonts-liberation \
+    fonts-dejavu-core fonts-noto-core fonts-noto-cjk fonts-liberation \
     fonts-hosny-amiri \
     curl ca-certificates
 

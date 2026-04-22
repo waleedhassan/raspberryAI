@@ -330,16 +330,53 @@ class PDFWatcher(threading.Thread):
 # ---------------------------------------------------------------------------
 
 
+# Explicit system paths for fonts that install.sh apt-installs on Raspberry Pi OS.
+# We look at absolute paths because pygame.font.match_font() frequently misses
+# on headless Pi OS — its fontconfig name matching is brittle.
+_SYSTEM_LATIN_FONTS = [
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+    "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+    "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+    "/usr/share/fonts/truetype/noto/NotoSans-Bold.ttf",
+    "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
+]
+_SYSTEM_ARABIC_FONTS = [
+    "/usr/share/fonts/truetype/hosny-amiri/amiri-regular.ttf",
+    "/usr/share/fonts/truetype/hosny-amiri/Amiri-Regular.ttf",
+    "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf",
+    "/usr/share/fonts/truetype/noto/NotoSansArabic-Regular.ttf",
+]
+
+
 def _pick_font(candidates: list[str], size: int, bold: bool = False) -> pygame.font.Font:
+    # 1. Bundled fonts in $AI_PDF_ROOT/fonts
     for name in candidates:
         p = FONTS_DIR / name
         if p.exists():
             f = pygame.font.Font(str(p), size)
             f.set_bold(bold)
             return f
-    # fall back to a system font that probably supports Arabic
-    sysname = pygame.font.match_font("notosansarabic,amiri,dejavusans,arial")
-    f = pygame.font.Font(sysname, size) if sysname else pygame.font.SysFont(None, size)
+
+    # 2. Known system paths — Arabic pool if caller asked for Arabic, else Latin.
+    is_arabic = any("Amiri" in c or "Arabic" in c for c in candidates)
+    system_pool = _SYSTEM_ARABIC_FONTS if is_arabic else _SYSTEM_LATIN_FONTS
+    for path in system_pool:
+        if os.path.exists(path):
+            f = pygame.font.Font(path, size)
+            f.set_bold(bold)
+            return f
+
+    # 3. fontconfig lookup as a softer fallback
+    query = "amiri,notonaskharabic,notosansarabic" if is_arabic else "dejavusans,liberationsans,notosans"
+    sysname = pygame.font.match_font(query, bold=bold)
+    if sysname:
+        f = pygame.font.Font(sysname, size)
+        f.set_bold(bold)
+        return f
+
+    # 4. Last resort — pygame's bundled default. Will tofu on non-ASCII.
+    f = pygame.font.SysFont(None, size)
     f.set_bold(bold)
     return f
 
