@@ -1,7 +1,9 @@
 [Unit]
 Description=AI PDF Brain — fullscreen insight display
-After=multi-user.target systemd-user-sessions.service ollama.service
-Wants=multi-user.target ollama.service
+# Wait for the graphical session (X on the MHS35 TFT) to be up.
+After=graphical.target ollama.service
+Wants=ollama.service
+Requires=graphical.target
 
 [Service]
 Type=simple
@@ -9,17 +11,15 @@ User=pi
 Group=pi
 Environment=HOME=/home/pi
 Environment=XDG_RUNTIME_DIR=/run/user/1000
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=/home/pi/.Xauthority
 WorkingDirectory=/home/pi/ai-pdf
 ExecStart=/home/pi/ai-pdf/start.sh
 Restart=always
 RestartSec=3
 StandardOutput=journal
 StandardError=journal
-# Give the framebuffer/KMS devices to the service.
-SupplementaryGroups=video render input tty
-TTYPath=/dev/tty1
-TTYReset=yes
-TTYVHangup=yes
+SupplementaryGroups=video render input
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=graphical.target

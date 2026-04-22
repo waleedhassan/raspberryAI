@@ -8,14 +8,13 @@ PY="$VENV/bin/python"
 
 export AI_PDF_ROOT="$APP_DIR"
 export PYTHONUNBUFFERED=1
-# SDL / pygame on a Pi without a desktop: prefer KMSDRM, fall back to FBCON.
-export SDL_VIDEODRIVER="${SDL_VIDEODRIVER:-kmsdrm}"
-export SDL_FBDEV="${SDL_FBDEV:-/dev/fb1}"
+# MHS35 TFT (fbtft / SPI) is driven by the X server configured by MHS35-show.
+# Pygame talks to X, X renders onto /dev/fb1. Do NOT use kmsdrm here — it
+# replaces the fbdev stack and blanks the TFT.
+export SDL_VIDEODRIVER="${SDL_VIDEODRIVER:-x11}"
+export DISPLAY="${DISPLAY:-:0}"
+export XAUTHORITY="${XAUTHORITY:-/home/pi/.Xauthority}"
 export SDL_NOMOUSE=1
-# Hide the cursor on any tty we own.
-if command -v setterm >/dev/null 2>&1; then
-    setterm -cursor off >/dev/tty1 2>/dev/null || true
-fi
 
 cd "$APP_DIR"
 
