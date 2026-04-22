@@ -46,20 +46,20 @@ MAX_CHUNK_CHARS = 1800
 MAX_CHUNKS_CACHED = 64
 
 # ---------------------------------------------------------------------------
-# Colors
+# Colors — DStation palette (white/cream, warm orange, graphite)
 # ---------------------------------------------------------------------------
 
-BG_TOP = (8, 12, 28)
-BG_BOTTOM = (18, 8, 36)
-ACCENT_A = (128, 90, 255)
-ACCENT_B = (70, 180, 255)
-CARD_FILL = (255, 255, 255, 18)
-CARD_EDGE = (255, 255, 255, 55)
-TEXT_MAIN = (240, 244, 255)
-TEXT_DIM = (170, 180, 210)
-BTN_TOP = (96, 80, 230)
-BTN_BOT = (60, 140, 230)
-BTN_GLOW = (140, 120, 255)
+BG_TOP = (255, 255, 255)      # white
+BG_BOTTOM = (255, 241, 232)   # #FFF1E8 cream
+ACCENT_A = (255, 143, 28)     # #FF8F1C orange
+ACCENT_B = (255, 219, 194)    # #FFDBC2 peach
+CARD_FILL = (255, 255, 255, 230)
+CARD_EDGE = (58, 58, 58, 38)
+TEXT_MAIN = (32, 32, 36)      # near-black
+TEXT_DIM = (117, 117, 117)    # #757575
+BTN_TOP = (255, 159, 56)      # lighter orange top
+BTN_BOT = (233, 131, 22)      # #E98316 deeper orange bottom
+BTN_GLOW = (255, 143, 28)
 
 # ---------------------------------------------------------------------------
 # Arabic / language support
@@ -489,7 +489,7 @@ class Spinner:
             py = cy + math.sin(a) * self.radius
             alpha = int(60 + 180 * ((i / 12)))
             s = pygame.Surface((6, 6), pygame.SRCALPHA)
-            pygame.draw.circle(s, (220, 225, 255, alpha), (3, 3), 3)
+            pygame.draw.circle(s, (*ACCENT_A, alpha), (3, 3), 3)
             target.blit(s, (px - 3, py - 3))
 
 
@@ -823,10 +823,10 @@ class App:
         card = pygame.Surface(self.card_rect.size, pygame.SRCALPHA)
         round_rect(card, CARD_FILL, card.get_rect(), radius=20)
         pygame.draw.rect(card, CARD_EDGE, card.get_rect(), width=1, border_radius=20)
-        # subtle top highlight
-        hl = pygame.Surface((self.card_rect.w, 2), pygame.SRCALPHA)
-        hl.fill((255, 255, 255, 45))
-        card.blit(hl, (0, 1))
+        # warm accent strip along the top edge
+        accent = pygame.Surface((self.card_rect.w, 3), pygame.SRCALPHA)
+        accent.fill((*ACCENT_A, 200))
+        card.blit(accent, (0, 0))
         self.screen.blit(card, self.card_rect.topleft)
 
         generating = self.controller.state == InsightState.GENERATING
