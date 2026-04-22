@@ -293,29 +293,53 @@ class PDFWatcher(threading.Thread):
     """Polls the input directory and fires a callback when the active PDF changes."""
 
     def __init__(self, directory: Path, on_change):
-        super().__init__(daemon=True)
+        # NOTE: use `_stop_event`, not `_stop` — Thread._stop is a method on the
+        # parent class; shadowing it with an Event breaks thread cleanup.
+        super().__init__(daemon=True, name="PDFWatcher")
         self.directory = directory
         self.on_change = on_change
-        self._stop = threading.Event()
+        self._stop_event = threading.Event()
         self._last_fp: Optional[str] = None
 
     def stop(self) -> None:
-        self._stop.set()
+        self._stop_event.set()
 
     def run(self) -> None:
-        while not self._stop.is_set():
+        print(f"[watcher] watching {self.directory}", file=sys.stderr, flush=True)
+        fired_once = False
+        while not self._stop_event.is_set():
             try:
                 pdf = self._latest_pdf()
                 fp = _file_fingerprint(pdf) if pdf else None
-                if fp != self._last_fp:
+                if not fired_once:
+                    print(
+                        f"[watcher] initial scan: pdf={pdf} fp={fp}",
+                        file=sys.stderr,
+                        flush=True,
+                    )
+                # Fire on fingerprint change, and also once at startup (even
+                # with pdf=None) so the UI replaces the "Waiting for PDF…"
+                # placeholder with the real state of the input directory.
+                if fp != self._last_fp or not fired_once:
                     self._last_fp = fp
+                    fired_once = True
+                    print(
+                        f"[watcher] change detected → on_change({pdf})",
+                        file=sys.stderr,
+                        flush=True,
+                    )
                     self.on_change(pdf)
             except Exception as e:
-                print(f"[watcher] {e}", file=sys.stderr)
-            self._stop.wait(1.5)
+                print(f"[watcher] error: {e!r}", file=sys.stderr, flush=True)
+            self._stop_event.wait(1.5)
 
     def _latest_pdf(self) -> Optional[Path]:
         if not self.directory.exists():
+            print(
+                f"[watcher] directory missing: {self.directory}",
+                file=sys.stderr,
+                flush=True,
+            )
             return None
         pdfs = sorted(
             (p for p in self.directory.iterdir() if p.suffix.lower() == ".pdf"),
@@ -586,22 +610,36 @@ class InsightController:
             self._used_indices.clear()
             self.state = InsightState.IDLE
             self.status_message = "Place a PDF in input/ to begin."
+            print("[controller] no PDF present", file=sys.stderr, flush=True)
             return
         try:
             self.status_message = f"Reading {path.name}…"
+            print(f"[controller] extracting {path}", file=sys.stderr, flush=True)
             doc = extract_pdf(path)
         except Exception as e:
             self.error = f"Could not read PDF: {e}"
             self.document = None
+            print(f"[controller] extract failed: {e!r}", file=sys.stderr, flush=True)
             return
         if not doc["chunks"]:
             self.error = "PDF has no extractable text."
             self.document = None
+            print(
+                f"[controller] PDF has no extractable text: {path}",
+                file=sys.stderr,
+                flush=True,
+            )
             return
         self.error = None
         self.document = doc
         self._used_indices.clear()
         self.status_message = f"Loaded {path.name} ({doc['language'].upper()})"
+        print(
+            f"[controller] loaded {path.name}: "
+            f"{len(doc['chunks'])} chunks, lang={doc['language']}",
+            file=sys.stderr,
+            flush=True,
+        )
         self.request_new()
 
     # -- generation ----------------------------------------------------------
