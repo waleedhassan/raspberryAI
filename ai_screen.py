@@ -747,30 +747,31 @@ class App:
         self._ensure_dirs()
         self._init_pygame()
         self.clock = pygame.time.Clock()
+        self.screen_size = self.screen.get_size()
         self.fonts = Fonts.build()
-        self.bg = AnimatedBackground((SCREEN_W, SCREEN_H))
+        self.bg = AnimatedBackground(self.screen_size)
         self.spinner = Spinner(radius=12)
 
-        btn_w, btn_h = 240, 48
+        btn_w, btn_h = int(self.screen_size[0] * 0.5), int(self.screen_size[1] * 0.08)
         self.button = Button(
             pygame.Rect(
-                (SCREEN_W - btn_w) // 2,
-                SCREEN_H - btn_h - 28,
+                (self.screen_size[0] - btn_w) // 2,
+                self.screen_size[1] - btn_h - int(self.screen_size[1] * 0.05),
                 btn_w,
                 btn_h,
             )
         )
 
-        card_margin_x = 22
-        card_top = 26
-        card_bottom = self.button.rect.top - 14
+        card_margin_x = int(self.screen_size[0] * 0.05)
+        card_top = int(self.screen_size[1] * 0.08)
+        card_bottom = self.button.rect.top - int(self.screen_size[1] * 0.03)
         self.card_rect = pygame.Rect(
             card_margin_x,
             card_top,
-            SCREEN_W - card_margin_x * 2,
+            self.screen_size[0] - card_margin_x * 2,
             card_bottom - card_top,
         )
-        self.text_area = self.card_rect.inflate(-28, -28)
+        self.text_area = self.card_rect.inflate(-int(self.screen_size[0] * 0.06), -int(self.screen_size[1] * 0.06))
         self.renderer = InsightRenderer(self.fonts, pygame.Rect(0, 0, self.text_area.w, self.text_area.h))
 
         self.engine = InsightEngine(MODEL_TAG, OLLAMA_URL)
@@ -799,10 +800,11 @@ class App:
         os.environ.setdefault("SDL_VIDEO_CENTERED", "1")
         pygame.init()
         pygame.display.set_caption("DStation AI")
-        flags = pygame.FULLSCREEN | pygame.SCALED
+        flags = pygame.FULLSCREEN
         if os.environ.get("AI_PDF_WINDOWED") == "1":
-            flags = pygame.SCALED
-        self.screen = pygame.display.set_mode((SCREEN_W, SCREEN_H), flags)
+            flags = 0
+        info = pygame.display.Info()
+        self.screen = pygame.display.set_mode((info.current_w, info.current_h), flags)
         pygame.mouse.set_visible(False)
         pygame.event.set_blocked(pygame.MOUSEMOTION)
 
@@ -891,7 +893,7 @@ class App:
     def _draw_footer(self) -> None:
         label = self.fonts.footer.render("DStation AI", True, TEXT_DIM)
         rect = label.get_rect()
-        rect.midbottom = (SCREEN_W // 2, SCREEN_H - 6)
+        rect.midbottom = (self.screen_size[0] // 2, self.screen_size[1] - 6)
         self.screen.blit(label, rect)
 
     def _draw(self, t: float) -> None:
