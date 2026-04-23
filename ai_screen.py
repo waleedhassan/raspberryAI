@@ -415,15 +415,15 @@ class Fonts:
     footer: pygame.font.Font
 
     @classmethod
-    def build(cls) -> "Fonts":
+    def build(cls) -> Fonts:
         latin = ["Inter-SemiBold.ttf", "Inter-Medium.ttf"]
         arabic = ["Amiri-Regular.ttf", "NotoNaskhArabic-Regular.ttf"]
         return cls(
-            latin_body=_pick_font(latin, 24, bold=True),
-            latin_body_small=_pick_font(latin, 20, bold=True),
-            arabic_body=_pick_font(arabic, 26),
-            arabic_body_small=_pick_font(arabic, 22),
-            ui=_pick_font(latin, 18, bold=True),
+            latin_body=_pick_font(latin, 20, bold=True),
+            latin_body_small=_pick_font(latin, 17, bold=True),
+            arabic_body=_pick_font(arabic, 22),
+            arabic_body_small=_pick_font(arabic, 19),
+            ui=_pick_font(latin, 16, bold=True),
             footer=_pick_font(latin, 11),
         )
 
@@ -762,16 +762,16 @@ class App:
             )
         )
 
-        card_margin_x = int(self.screen_size[0] * 0.05)
-        card_top = int(self.screen_size[1] * 0.08)
-        card_bottom = self.button.rect.top - int(self.screen_size[1] * 0.03)
+        card_margin_x = int(self.screen_size[0] * 0.08)
+        card_top = int(self.screen_size[1] * 0.12)
+        card_bottom = self.button.rect.top - int(self.screen_size[1] * 0.08)
         self.card_rect = pygame.Rect(
             card_margin_x,
             card_top,
             self.screen_size[0] - card_margin_x * 2,
             card_bottom - card_top,
         )
-        self.text_area = self.card_rect.inflate(-int(self.screen_size[0] * 0.06), -int(self.screen_size[1] * 0.06))
+        self.text_area = self.card_rect.inflate(-int(self.screen_size[0] * 0.04), -int(self.screen_size[1] * 0.04))
         self.renderer = InsightRenderer(self.fonts, pygame.Rect(0, 0, self.text_area.w, self.text_area.h))
 
         self.engine = InsightEngine(MODEL_TAG, OLLAMA_URL)
